@@ -263,6 +263,10 @@ export function registerForumBulletin(app: Express): void {
       if (!await permit(actor, "moderate", res)) return;
       const now = new Date();
       const updated = await db.transaction(async tx => {
+        // Share the same row lock as reply insertion to prevent lock/reply races.
+        const [rowLocked] = await tx.select({ id: forumThreads.id })
+          .from(forumThreads).where(eq(forumThreads.id, threadId)).for("update");
+        if (!rowLocked) throw new ForumInputError("Thread not found.");
         const update = (action === "lock" || action === "unlock")
           ? { isLocked: action === "lock", updatedAt: now, updatedBy: actor }
           : { isPinned: action === "pin", updatedAt: now, updatedBy: actor };
