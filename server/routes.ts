@@ -1,6 +1,7 @@
 import type { Express, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import { registerForumBulletin, guardForumThreadCreate, guardForumReplyCreate } from "./forum-bulletin";
 import { setupAuth0, registerAuth0Routes, isAuthenticated } from "./auth0";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -45,6 +46,7 @@ export async function registerRoutes(
   // Auth0 Setup
   setupAuth0(app);
   registerAuth0Routes(app);
+  registerForumBulletin(app);
 
   // === PROFILES ===
   app.get(api.profiles.get.path, async (req: any, res) => {
@@ -1411,7 +1413,7 @@ export async function registerRoutes(
   });
 
   // Create a thread
-  app.post("/api/forums/categories/:slug/threads", isAuthenticated, async (req, res) => {
+  app.post("/api/forums/categories/:slug/threads", isAuthenticated, guardForumThreadCreate, async (req, res) => {
     try {
       const userId = (req as any).userId || (req as any).oidc?.user?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -1466,7 +1468,7 @@ export async function registerRoutes(
   });
 
   // Create a reply
-  app.post("/api/forums/threads/:id/replies", isAuthenticated, async (req, res) => {
+  app.post("/api/forums/threads/:id/replies", isAuthenticated, guardForumReplyCreate, async (req, res) => {
     try {
       const userId = (req as any).userId || (req as any).oidc?.user?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
