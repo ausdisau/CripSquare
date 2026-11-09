@@ -2,7 +2,10 @@ import type { Express, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { registerForumBulletin, guardForumThreadCreate, guardForumReplyCreate } from "./forum-bulletin";
-import { setupAuth0, registerAuth0Routes, isAuthenticated } from "./auth0";
+import { setupAuth0, registerAuth0Routes, isAuthenticated, requiresAgeVerification } from "./auth0";
+import { bulletinEnabled } from "@shared/forum-bulletin-policy";
+import { safeForumAuthor } from "@shared/forum-bulletin-security-policy";
+import { requireForumCookieOrigin } from "./forum-bulletin-security";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { POINT_VALUES, EXTENSION_EVENTS, EXTENSION_PERMISSIONS, profiles } from "@shared/schema";
@@ -46,6 +49,10 @@ export async function registerRoutes(
   // Auth0 Setup
   setupAuth0(app);
   registerAuth0Routes(app);
+  if (bulletinEnabled(process.env)) {
+    // Enforce member-only visibility and cross-origin write protection for legacy and bulletin APIs.
+    app.use("/api/forums", isAuthenticated, requiresAgeVerification, requireForumCookieOrigin);
+  }
   registerForumBulletin(app);
 
   // === PROFILES ===
@@ -1406,6 +1413,9 @@ export async function registerRoutes(
           return res.json(anonymized);
         }
       }
+      if (bulletinEnabled(process.env)) {
+        return res.json(threads.map((item: any) => ({ ...item, author: safeForumAuthor(item.author) })));
+      }
       res.json(threads);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1430,7 +1440,13 @@ export async function registerRoutes(
         mediaUrls: mediaUrls || [],
       }, userId);
       // Award points for starting a thread
-      await storage.awardPoints({ userId, points: 15, actionType: "forum_thread", description: "Started a forum thread" });
+      if (bulletinEnabled(process.env)) {
+        try {
+          await storage.awardPoints({ userId, points: 15, actionType: "forum_thread", description: "Started a forum thread" });
+        } catch { console.error("Forum thread saved; points award failed."); }
+      } else {
+        await storage.awardPoints({ userId, points: 15, actionType: "forum_thread", description: "Started a forum thread" });
+      }
       res.status(201).json(thread);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1444,6 +1460,13 @@ export async function registerRoutes(
       const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
       const thread = await storage.getForumThread(parseInt(req.params.id), page, limit);
       if (!thread) return res.status(404).json({ message: "Thread not found" });
+      if (bulletinEnabled(process.env)) {
+        return res.json({ ...thread,
+          author: safeForumAuthor(thread.author),
+          replies: (thread.replies || []).map((item: any) => ({ ...item, author: safeForumAuthor(item.author) })),
+          repliesPage: page, repliesLimit: limit,
+        });
+      }
       // eSafety: anonymize members_only (16–17 yo) authors for unauthenticated requests
       const requesterId = req.userId || req.oidc?.user?.sub;
       if (!requesterId) {
@@ -1478,10 +1501,22 @@ export async function registerRoutes(
       const reply = await storage.createForumReply({ threadId, body: body.trim(), mediaUrls: mediaUrls || [] }, userId);
       // Award points for replying
       const points = body.length >= 100 ? 10 : 5;
-      await storage.awardPoints({ userId, points, actionType: "forum_reply", description: "Replied to a forum thread" });
+      if (bulletinEnabled(process.env)) {
+        try {
+          await storage.awardPoints({ userId, points, actionType: "forum_reply", description: "Replied to a forum thread" });
+        } catch { console.error("Forum reply saved; points award failed."); }
+      } else {
+        await storage.awardPoints({ userId, points, actionType: "forum_reply", description: "Replied to a forum thread" });
+      }
       res.status(201).json(reply);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      if (bulletinEnabled(process.env) && e?.message === "THREAD_LOCKED") {
+        return res.status(423).json({ code: "THREAD_LOCKED", message: "This discussion is locked. Your draft has not been posted." });
+      }
+      if (bulletinEnabled(process.env) && e?.message === "THREAD_NOT_FOUND") {
+        return res.status(404).json({ message: "Discussion not found." });
+      }
+      res.status(500).json({ message: bulletinEnabled(process.env) ? "Forum reply could not be saved." : e.message });
     }
   });
 

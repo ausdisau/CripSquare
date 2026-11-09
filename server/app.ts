@@ -109,7 +109,7 @@ function exportLogMiddleware(app: express.Express) {
       const duration = Date.now() - start;
       if (requestPath.startsWith("/api")) {
         let logLine = `${req.method} ${requestPath} ${res.statusCode} in ${duration}ms`;
-        if (capturedJsonResponse) {
+        if (capturedJsonResponse && !requestPath.startsWith("/api/forums")) {
           logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
         }
 

@@ -19,7 +19,7 @@ New opt-in bulletin layer:
 
 ### Still not implemented (don't claim these are live)
 
-Full reply-body search; notifications or emails; private messages inside the new bulletin layer (existing separate DMs remain); edit history; category-level moderators; attachment scanning/storage; reactions beyond current voting; content hiding/deletion; complete React Native app; direct OSM/MapAble Signal data sharing. Existing text/reporting flow remains available under the legacy forum. **Moderation lock/reply concurrency remains a release gate**; it needs transaction-level enforcement and race testing before enabling in production.
+Full reply-body search; notifications or emails; private messages inside the new bulletin layer (existing separate DMs remain); edit history; category-level moderators; attachment scanning/storage; reactions beyond current voting; content hiding/deletion; complete React Native app; direct OSM/MapAble Signal data sharing. Existing text/reporting flow remains available under the legacy forum. Moderator and reply insertion now share a PostgreSQL thread-row lock inside transactions, but independent database concurrency tests are still a release gate.
 
 ## Routes
 
@@ -81,3 +81,16 @@ The neutral TypeScript rules in \`shared/forum-bulletin-policy.ts\` can be reuse
 2. Moderator queue and appeal workflow integration, editing with revisions, subscriptions with consent-controlled summaries.
 3. Approve Neon staging, Redis health/runbook, PostHog privacy governance, Vercel protected preview and screen-reader/AAC usability audit.
 4. Optional Expo forum companion reusing typed service contracts and verified mobile OIDC.
+
+
+## Follow-on hardening (stacked draft)
+
+- All `/api/forums` routes become authenticated and age-verified when the bulletin feature is enabled, including legacy category and detail GETs; access remains unchanged while the flag is OFF.
+- Cookie-authenticated forum POST/PUT/PATCH/DELETE calls require the exact server-configured `CRIPSQUARE_FORUM_PUBLIC_ORIGIN`. Cross-site and same-site `Sec-Fetch-Site` contexts are denied, missing or mismatched origins fail closed. Configure the expected HTTPS origin separately for each isolated preview; localhost HTTP is development-only.
+- All member-facing forum author joins are explicitly projected to id/name/avatar; email, account status, admin roles and other user fields cannot be serialized from the user relation when enabled.
+- The forum server avoids including full forum API JSON bodies in logging (even with the feature OFF), reducing accidental disclosure of posts and author data.
+- Thread insert/category count become atomic inside a transaction (when enabled). A successfully committed thread/reply is returned as 201 even when the non-essential points award fails; failed points are **not** automatically reconciled and need an operations workflow.
+- A visible privacy control lets members opt into/out of optional analytics. It displays current state only when the bulletin is enabled. Events require the separate PostHog flag and do not include content.
+- Local, framework-free Node 22 tests cover origin abuse cases and explicit author projections. End-to-end Auth0, PostgreSQL concurrency, security, Redis, analytics egress, AAC/switch and WCAG 2.2 AA acceptance remain required before production.
+- The repository currently has unrelated TypeScript errors in its combined Next.js/Vite/Replit paths. Full `npm run check` is not presently green; isolate and fix these baseline errors without rewriting production auth.
+- ESLint community flat config and TypeScript lint dependencies have **not** been added because `package-lock.json` must be regenerated from a controlled dependency install. Follow up with an isolated lint gate once the mixed-app build is normalised.

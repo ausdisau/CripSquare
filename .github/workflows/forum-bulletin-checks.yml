@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - "shared/forum-bulletin-*.ts"
+      - "server/forum-bulletin-security.ts"
+      - "client/src/components/ForumAnalyticsConsent.tsx"
+      - "tests/forum-bulletin-security.test.mjs"
       - "server/forum-bulletin*.ts"
       - "client/src/pages/ForumSearch.tsx"
       - "client/src/components/ForumThreadTools.tsx"
@@ -29,7 +32,7 @@ jobs:
           node-version: "22"
           cache: npm
       - name: Test platform-neutral forum safety policy
-        run: node --experimental-strip-types --test tests/forum-bulletin-policy.test.mjs
+        run: node --experimental-strip-types --test tests/forum-bulletin-policy.test.mjs tests/forum-bulletin-security.test.mjs
       - name: Restore locked dependencies
         run: npm ci --ignore-scripts
       - name: TypeScript verification

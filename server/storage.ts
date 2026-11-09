@@ -1035,8 +1035,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createForumThread(data: InsertForumThread, authorId: string): Promise<ForumThread> {
+    if (bulletinEnabled(process.env)) {
+      // Persist the thread and category count together to avoid false failures and orphaned counters.
+      return db.transaction(async tx => {
+        const [category] = await tx.select({ id: forumCategories.id })
+          .from(forumCategories).where(eq(forumCategories.id, data.categoryId)).for("update");
+        if (!category) throw new Error("FORUM_CATEGORY_NOT_FOUND");
+        const [thread] = await tx.insert(forumThreads).values({ ...data, authorId }).returning();
+        await tx.update(forumCategories)
+          .set({ threadCount: sql`${forumCategories.threadCount} + 1`, lastActivityAt: new Date() })
+          .where(eq(forumCategories.id, data.categoryId));
+        return thread;
+      });
+    }
     const [thread] = await db.insert(forumThreads).values({ ...data, authorId }).returning();
-    // Update category thread count and lastActivityAt
     await db.update(forumCategories)
       .set({ threadCount: sql`${forumCategories.threadCount} + 1`, lastActivityAt: new Date() })
       .where(eq(forumCategories.id, data.categoryId));

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { SEO } from "@/components/SEO";
 import { CreateThreadDialog } from "@/components/CreateThreadDialog";
+import { ForumAnalyticsConsent } from "@/components/ForumAnalyticsConsent";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, MessageCircle, Heart, Zap, FileText, Home, Briefcase, Activity, Stethoscope, ChevronRight } from "lucide-react";
 import type { ForumCategory } from "@shared/schema";
@@ -67,6 +68,8 @@ export default function Forums() {
             </Link>
           )}
         </div>
+
+        {bulletin?.enabled && <ForumAnalyticsConsent />}
 
         {isLoading ? (
           <div className="space-y-2">
