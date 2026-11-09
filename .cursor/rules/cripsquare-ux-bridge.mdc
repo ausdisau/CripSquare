@@ -1,0 +1,12 @@
+---
+description: Cross-editor CripSquare and MapAble Signal UX contract and safe delivery rules
+alwaysApply: true
+---
+
+CripSquare is Australian Disability Ltd's community conduit. Read `docs/bridge/ux-contract.v1.json` and `docs/bridge/README.md` before changing any page, community flow, moderation, identity, privacy or accessibility code.
+
+Cursor/GitHub and Replit CeipSquare use different repositories and identity models (Auth0 versus Clerk). Never copy server authentication, database, secrets or application roots across systems. Coordinate semantic journeys through the versioned contract, observed snapshots and reviewed PRs. Do not silently normalise accepted differences or hide known gaps.
+
+For each change: identify impacted journey IDs; run `node --test tests/bridge/contract.test.mjs` and `node scripts/bridge/check-contract.mjs --strict --repo .`; update the observed snapshot only when code inspection supports the change. For browser UX, require keyboard, screen-reader, AAC, visible focus, 200-400% zoom/reflow, reduced-motion and accessible recovery tests; do not claim WCAG conformance from static or automated tests alone.
+
+MapAble Signal community posts and access observations have different provenance and consent. Unknown stays Unknown if evidence is missing, disputed, stale or not reviewed; Not Applicable is separate from Green. No automatic publication, location disclosure, production data or accreditation claims. Stop for human review when moderation, minors, consent, security or identity changes are proposed.

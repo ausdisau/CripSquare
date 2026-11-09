@@ -1,0 +1,26 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {loadProject,parseReactRoutes,validateContract,checkSnapshots,canonicalJson,fingerprint,toMarkdown} from '../../scripts/bridge/check-contract.mjs';
+import {checkRemote,verifyPayload} from '../../scripts/bridge/remote-handshake.mjs';
+
+const {contract,snapshots}=loadProject();
+const deepClone=x=>JSON.parse(JSON.stringify(x));
+test('contract schema is complete and valid',()=>assert.deepEqual(validateContract(contract),[]));
+test('canonical digest is stable regardless of key order',()=>assert.equal(fingerprint({b:2,a:1}),fingerprint({a:1,b:2})));
+test('canonical digest changes on an added consent rule',()=>assert.notEqual(fingerprint(contract),fingerprint({...contract,requirements:{...contract.requirements,consentBeforeSharing:false}})));
+test('detects repeated journey IDs',()=>{const c=deepClone(contract);c.journeys.push(deepClone(c.journeys[0]));assert.match(validateContract(c).join(' '),/duplicate journey/);});
+test('detects invalid parity classification',()=>{const c=deepClone(contract);c.journeys[0].parity='must-autopublish';assert.match(validateContract(c).join(' '),/Invalid parity/);});
+test('baseline snapshots can be checked without a checkout',()=>{const r=checkSnapshots(contract,snapshots,null);assert.equal(r.errors.length,0);assert.equal(r.verifiedRouteInventory,false);});
+test('known missing routes remain visible as gaps, not successes',()=>{const r=checkSnapshots(contract,snapshots,null);assert.ok(r.issues.some(x=>x.id==='safety-and-reporting'&&x.severity==='gap'));assert.ok(r.issues.some(x=>x.id==='mapable-signal'&&x.severity==='planned'));});
+test('a changed Replit journey requires explicit reconciliation',()=>{const s=deepClone(snapshots);s.replit.journeys.forums='absent';assert.match(checkSnapshots(contract,s,null).errors.join(' '),/Drift: replit \/ forums/);});
+test('missing source provenance fails',()=>{const s=deepClone(snapshots);delete s.replit.sourceCommit;assert.match(checkSnapshots(contract,s,null).errors.join(' '),/Missing provenance/);});
+test('route inventory picks literal Wouter paths',()=>assert.deepEqual([...parseReactRoutes('<Route path="/" component={Home}/><Route path="/groups" component={Groups}/>')],['/','/groups']));
+test('GitHub client missing an existing route is a regression',()=>{const r=checkSnapshots(contract,snapshots,'<Route path="/" component={Home}/>');assert.ok(r.errors.some(e=>e.includes('Route regression: groups')));});
+test('unexpected live Signal route requires contract and snapshot refresh',()=>{const r=checkSnapshots(contract,snapshots,'<Route path="/signal" component={Signal}/>');assert.ok(r.errors.some(e=>e.includes('Route changed: mapable-signal')));});
+test('accessible report explicitly states no WCAG conformance conclusion',()=>assert.match(toMarkdown(checkSnapshots(contract,snapshots,null)),/never infer Git parity|WCAG conformance/));
+test('matching remote metadata proves only contract parity',()=>{const r=verifyPayload({contractId:contract.contractId,schemaVersion:contract.schemaVersion,contractSha256:fingerprint(contract)},contract);assert.equal(r.result,'contract-metadata-parity-only');});
+test('old remote fingerprint is rejected',()=>assert.throws(()=>verifyPayload({contractId:contract.contractId,schemaVersion:contract.schemaVersion,contractSha256:'bad'},contract),/Contract version drift/));
+test('non-Replit hosts cannot be read by network bridge',async()=>assert.rejects(()=>checkRemote('https://example.com/bridge.json',contract),/Only HTTPS/));
+test('non-https remote is rejected',async()=>assert.rejects(()=>checkRemote('http://my.replit.dev/bridge.json',contract),/Only HTTPS/));
+test('remote redirects are disabled',async()=>{const fn=async()=>({ok:true,headers:{get:()=> 'application/json'},text:async()=>JSON.stringify({contractId:contract.contractId,schemaVersion:contract.schemaVersion,contractSha256:fingerprint(contract)})});const r=await checkRemote('https://example.replit.dev/bridge.json',contract,fn);assert.equal(r.result,'contract-metadata-parity-only');});
+test('remote rejects oversized payload',async()=>{const fn=async()=>({ok:true,headers:{get:(k)=>k==='content-length'?'9000':'application/json'},text:async()=>'{"test":"hi"}'});await assert.rejects(()=>checkRemote('https://example.replit.dev/bridge.json',contract,fn),/too large/);});

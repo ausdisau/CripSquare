@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "1.0.0",
+  "contractId": "adlt-cripsquare-community-conduit",
+  "name": "CripSquare shared community UX contract",
+  "owner": "Australian Disability Ltd",
+  "purpose": "Keep participant journeys, accessibility expectations and data boundaries aligned across Cursor/GitHub and Replit without replacing either application.",
+  "reviewStatus": "draft-for-human-review",
+  "requirements": {
+    "webAccessibilityTarget": "WCAG 2.2 AA (target, not a conformance statement)",
+    "authoringTarget": "ATAG 2.0 for community and mapping authoring where applicable",
+    "noColourOnlyMeaning": true,
+    "usableWithAAC": true,
+    "keyboardAndVisibleFocus": true,
+    "screenReaderFeedback": true,
+    "zoomAndReflow": "200% text zoom and 400% reflow to be human tested",
+    "mappingListAlternative": true,
+    "consentBeforeSharing": true,
+    "noDiagnosisRequiredForGeneralParticipation": true,
+    "redAmberGreenUnknownRule": "Unknown if missing, out of date, disputed, unreviewed or insufficient evidence; Not Applicable is distinct from Green",
+    "publicAccreditation": false,
+    "productionPersonalDataInTests": false
+  },
+  "platforms": {
+    "github": {
+      "repository": "ausdisau/CripSquare",
+      "target": "client/src/App.tsx React/Vite/Wouter (not the separate Next.js app)",
+      "identity": "Auth0",
+      "sourceOfTruth": "GitHub source and reviewed PRs"
+    },
+    "replit": {
+      "appTitle": "CeipSquare",
+      "replId": "4bc4cb03-e9f9-4226-9086-b9fd3ad80f98",
+      "webBasePath": "/cripsquare-web/",
+      "target": "artifacts/cripsquare-web React/Vite/Wouter in a pnpm monorepo",
+      "identity": "Clerk",
+      "sourceOfTruth": "Replit checkout until an explicit Git remote migration is approved",
+      "gitBridgeStatus": "no ausdisau/CripSquare remote; do not force-attach the different history"
+    }
+  },
+  "journeys": [
+    {
+      "id": "village-square",
+      "title": "Community welcome and discovery",
+      "intent": "Find welcoming community content without compulsory disclosure",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "present", "route": "/", "interaction": "route", "access": "signed-in" },
+        "replit": { "status": "present", "route": "/", "interaction": "route", "access": "public-read" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["public content does not reveal member-only identity or private access needs", "main landmark, logical heading, keyboard navigation"]
+    },
+    {
+      "id": "groups",
+      "title": "Join communities and groups",
+      "intent": "Browse communities and choose participation without forced diagnosis disclosure",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "present", "route": "/groups", "interaction": "route", "access": "signed-in" },
+        "replit": { "status": "present", "route": "/communities", "interaction": "route-and-dialog", "access": "public-read; verified-email-write" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["community purpose and membership terms readable before joining", "all dialog actions work via keyboard and AAC", "membership withdrawal is available"]
+    },
+    {
+      "id": "forums",
+      "title": "Community discussions and replies",
+      "intent": "Ask questions, share experience and reply without algorithmic pressure",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "present", "route": "/forums", "interaction": "route", "access": "signed-in" },
+        "replit": { "status": "present", "route": "/forums", "interaction": "route-and-dialog", "access": "public-read; verified-email-write" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["clear distinction between advice and verified accessibility evidence", "reply editor supports keyboard and AAC", "moderation and appeals are explained"]
+    },
+    {
+      "id": "stories",
+      "title": "Community stories and blogs",
+      "intent": "Share lived experience with control over audience and publication",
+      "priority": "high",
+      "expected": {
+        "github": { "status": "present", "route": "/blogs", "interaction": "route", "access": "signed-in" },
+        "replit": { "status": "present", "route": "/blogs", "interaction": "route-and-dialog", "access": "public-read; verified-email-write" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["authoring with descriptive labels and autosave plan", "no unconsented republication"]
+    },
+    {
+      "id": "resources",
+      "title": "Community resources",
+      "intent": "Find disability support, advocacy and practical resources",
+      "priority": "high",
+      "expected": {
+        "github": { "status": "present", "route": "/resources", "interaction": "route", "access": "signed-in" },
+        "replit": { "status": "present", "route": "/resources", "interaction": "route-and-dialog", "access": "public-read; verified-email-write" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["search and filtering do not require a mouse", "service claims include source and date"]
+    },
+    {
+      "id": "events",
+      "title": "Accessible community events",
+      "intent": "Find and participate in events with usable access details",
+      "priority": "high",
+      "expected": {
+        "github": { "status": "absent", "route": null, "interaction": "none", "access": "not-implemented" },
+        "replit": { "status": "present", "route": "/events", "interaction": "route-and-dialog", "access": "public-read; verified-email-write" }
+      },
+      "parity": "known-gap",
+      "acceptance": ["event access arrangements, transport information and communication options are explicit", "do not guarantee access from unverified claims"]
+    },
+    {
+      "id": "display-preferences",
+      "title": "Accessibility and communication preferences",
+      "intent": "Choose legible, workable interaction without losing control",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "present", "route": null, "interaction": "accessible-overlay", "access": "client-preference" },
+        "replit": { "status": "present", "route": "/accessibility", "interaction": "route", "access": "public-read" }
+      },
+      "parity": "accepted-difference",
+      "acceptance": ["text size, contrast, reduced motion and keyboard access are preserved", "no forced diagnosis disclosure", "AAC text input is retained"]
+    },
+    {
+      "id": "safety-and-reporting",
+      "title": "Accessible safeguarding and community reporting",
+      "intent": "Report harassment or barriers without retaliation; obtain human escalation",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "present", "route": "/safety", "interaction": "route", "access": "public-read" },
+        "replit": { "status": "absent", "route": null, "interaction": "none", "access": "api-only" }
+      },
+      "parity": "known-gap",
+      "acceptance": ["accessible reporting route, confidentiality and response expectations", "moderator actions use server-side role enforcement", "accessible appeal and human help route"]
+    },
+    {
+      "id": "mapable-signal",
+      "title": "Community accessibility mapping challenges",
+      "intent": "Create, submit and review observations with consent and provenance",
+      "priority": "critical",
+      "expected": {
+        "github": { "status": "absent", "route": "/signal", "interaction": "planned-route", "access": "planned-signed-in" },
+        "replit": { "status": "absent", "route": "/signal", "interaction": "planned-route", "access": "planned-signed-in" }
+      },
+      "parity": "planned-both",
+      "acceptance": ["Unknown for incomplete, disputed or outdated evidence", "route alternatives and list-map parity", "consent before public sharing", "no formal accreditation or access guarantees", "authoring reachable by switch and AAC"]
+    }
+  ],
+  "releaseGates": ["feature flags default off for new network writes", "human-approved migration plan for Git and identity", "no real participant data in preview or CI", "keyboard, screen-reader, AAC and zoom testing", "role-checked moderation and consent withdrawal", "evidence provenance and Unknown states", "responsive usability and accessible errors", "explicit human approval before deployment"]
+}

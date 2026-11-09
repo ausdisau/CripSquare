@@ -1,0 +1,56 @@
+name: CripSquare Cursor-Replit UX contract
+
+on:
+  pull_request:
+    paths:
+      - 'client/src/**'
+      - 'docs/bridge/**'
+      - 'scripts/bridge/**'
+      - 'tests/bridge/**'
+      - 'AGENTS.md'
+      - '.cursor/rules/**'
+      - '.github/workflows/cripsquare-ux-bridge.yml'
+  push:
+    branches:
+      - 'feature/cripsquare-ux-bridge-*'
+    paths:
+      - 'client/src/**'
+      - 'docs/bridge/**'
+      - 'scripts/bridge/**'
+      - 'tests/bridge/**'
+      - 'AGENTS.md'
+      - '.cursor/rules/**'
+  workflow_dispatch:
+  schedule:
+    # Daily metadata-only check when an approved dev endpoint is configured.
+    - cron: '15 23 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Contract, known gaps and optional Replit handshake
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run bridge unit tests (no app network or database required)
+        run: node --test tests/bridge/contract.test.mjs
+      - name: Inspect GitHub routes and compare committed UX snapshots
+        run: node scripts/bridge/check-contract.mjs --repo . --strict --out out/ux-bridge-report.md --json out/ux-bridge-report.json
+      - name: Optional read-only Replit metadata parity
+        env:
+          CRIPSQUARE_REPLIT_UX_STATUS_URL: ${{ vars.CRIPSQUARE_REPLIT_UX_STATUS_URL }}
+        run: node scripts/bridge/remote-handshake.mjs
+      - name: Store inspectable report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cripsquare-ux-bridge-report
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14

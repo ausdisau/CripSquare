@@ -1,0 +1,19 @@
+{
+  "snapshotVersion": 1,
+  "platform": "github",
+  "capturedAt": "2026-11-10",
+  "sourceCommit": "a8302aef2593ff8323e4b40d65cc43485cff0e13",
+  "source": "ausdisau/CripSquare main tree and inspected client/src/App.tsx",
+  "assurance": "code inspection only, not a verified running session",
+  "journeys": {
+    "village-square": "present",
+    "groups": "present",
+    "forums": "present",
+    "stories": "present",
+    "resources": "present",
+    "events": "absent",
+    "display-preferences": "present",
+    "safety-and-reporting": "present",
+    "mapable-signal": "absent"
+  }
+}
