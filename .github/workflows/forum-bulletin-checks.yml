@@ -1,0 +1,38 @@
+name: CripSquare forum bulletin checks
+on:
+  pull_request:
+    paths:
+      - "shared/forum-bulletin-*.ts"
+      - "server/forum-bulletin*.ts"
+      - "client/src/pages/ForumSearch.tsx"
+      - "client/src/components/ForumThreadTools.tsx"
+      - "client/src/pages/ForumThread.tsx"
+      - "client/src/pages/Forums.tsx"
+      - "client/src/App.tsx"
+      - "server/routes.ts"
+      - "tests/forum-bulletin-policy.test.mjs"
+      - "scripts/sql/20261110_forum_bulletin_additive.sql"
+      - ".github/workflows/forum-bulletin-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-and-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Test platform-neutral forum safety policy
+        run: node --experimental-strip-types --test tests/forum-bulletin-policy.test.mjs
+      - name: Restore locked dependencies
+        run: npm ci --ignore-scripts
+      - name: TypeScript verification
+        run: npm run check
+      - name: Vite production build verification
+        run: npm run build

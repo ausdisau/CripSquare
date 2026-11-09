@@ -31,6 +31,7 @@ import Discover from "@/pages/Discover";
 import Forums from "@/pages/Forums";
 import ForumCategory from "@/pages/ForumCategory";
 import ForumThread from "@/pages/ForumThread";
+import ForumSearch from "@/pages/ForumSearch";
 import NotFound from "@/pages/not-found";
 import SafetyCentre from "@/pages/SafetyCentre";
 import TermsOfService from "@/pages/TermsOfService";
@@ -117,6 +118,7 @@ function Router() {
       <Route path="/connect" component={props => <PrivateRoute component={Connect} {...props} />} />
       <Route path="/discover" component={props => <PrivateRoute component={Discover} {...props} />} />
       <Route path="/forums" component={props => <PrivateRoute component={Forums} {...props} />} />
+      <Route path="/forums/search" component={props => <PrivateRoute component={ForumSearch} {...props} />} />
       <Route path="/forums/:slug" component={props => <PrivateRoute component={ForumCategory} {...props} />} />
       <Route path="/forums/:slug/:threadId" component={props => <PrivateRoute component={ForumThread} {...props} />} />
       <Route path="/safety" component={SafetyCentre} />
