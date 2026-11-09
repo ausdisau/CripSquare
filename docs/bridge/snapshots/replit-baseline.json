@@ -1,0 +1,19 @@
+{
+  "snapshotVersion": 1,
+  "platform": "replit",
+  "capturedAt": "2026-11-10",
+  "sourceCommit": "5148947",
+  "source": "CeipSquare Replit app, read-only Agent inspection on 2026-11-10",
+  "assurance": "Replit Agent code inspection, no published build verification",
+  "journeys": {
+    "village-square": "present",
+    "groups": "present",
+    "forums": "present",
+    "stories": "present",
+    "resources": "present",
+    "events": "present",
+    "display-preferences": "present",
+    "safety-and-reporting": "absent",
+    "mapable-signal": "absent"
+  }
+}
