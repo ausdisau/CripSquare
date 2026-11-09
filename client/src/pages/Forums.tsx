@@ -38,6 +38,16 @@ export default function Forums() {
     queryKey: ["/api/forums/categories"],
   });
 
+  const { data: bulletin } = useQuery<{ enabled: boolean }>({
+    queryKey: ["/api/forums/bulletin/capabilities"],
+    retry: false,
+    queryFn: async () => {
+      const res = await fetch("/api/forums/bulletin/capabilities", { credentials: "include", cache: "no-store" });
+      if (!res.ok) return { enabled: false };
+      return res.json() as Promise<{ enabled: boolean }>;
+    },
+  });
+
   return (
     <Layout>
       <SEO
@@ -51,6 +61,11 @@ export default function Forums() {
           <p className="text-sm text-muted-foreground">
             Peer advice and discussion — newest activity first, no algorithm.
           </p>
+          {bulletin?.enabled && (
+            <Link href="/forums/search" className="inline-flex min-h-11 mt-3 items-center rounded-lg border px-4 py-2 text-sm font-semibold focus-visible:outline-2">
+              Search community discussions
+            </Link>
+          )}
         </div>
 
         {isLoading ? (
