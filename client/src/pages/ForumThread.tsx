@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ArrowUp, CheckCircle, ChevronLeft, Flag, Image, Lightbulb, MessageSquare, X } from "lucide-react";
 import type { ForumThread, ForumReply, ForumCategory } from "@shared/schema";
 import { ReportDialog } from "@/components/ReportDialog";
+import { ForumThreadTools, useBulletinThreadState } from "@/components/ForumThreadTools";
 
 type ReplyWithAuthor = ForumReply & {
   author: { id?: string; firstName: string | null; lastName: string | null; profileImageUrl: string | null };
@@ -582,6 +583,8 @@ export default function ForumThreadPage() {
     queryClient.invalidateQueries({ queryKey: [`/api/forums/threads/${threadId}`] });
   };
 
+  const { data: bulletinState } = useBulletinThreadState(thread?.id);
+
   return (
     <Layout>
       <SEO
@@ -711,6 +714,8 @@ export default function ForumThreadPage() {
               />
             )}
 
+            <ForumThreadTools threadId={thread.id} />
+
             {/* Accepted answers pinned first */}
             {acceptedReplies.map(reply => (
               <ReplyCard
@@ -762,7 +767,9 @@ export default function ForumThreadPage() {
             )}
 
             {/* Reply composer */}
-            {user ? (
+            {bulletinState?.isLocked ? (
+              <div className="sm-card p-4" role="status">This discussion is locked. New replies are closed.</div>
+            ) : user ? (
               <ReplyComposer threadId={threadId!} onSuccess={handleReplySuccess} />
             ) : (
               <div className="sm-card">
