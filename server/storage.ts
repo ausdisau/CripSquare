@@ -1,4 +1,6 @@
 import { db } from "./db";
+import { forumThreadControls } from "@shared/forum-bulletin-schema";
+import { bulletinEnabled } from "@shared/forum-bulletin-policy";
 import { eq, desc, and, sql, sum, gte, lte, lt, inArray, ne } from "drizzle-orm";
 import { 
   users, profiles, groups, posts, comments, gameScores, groupMembers,
@@ -978,6 +980,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listForumThreads(categoryId: number, limit = 30): Promise<(ForumThread & { author: User })[]> {
+    if (bulletinEnabled(process.env)) {
+      // Sticky discussions first; do not query new tables while feature is OFF.
+      const rows = await db.select({
+        thread: forumThreads,
+        author: users,
+        pinned: forumThreadControls.isPinned,
+        locked: forumThreadControls.isLocked,
+      }).from(forumThreads)
+        .innerJoin(users, eq(users.id, forumThreads.authorId))
+        .leftJoin(forumThreadControls, eq(forumThreadControls.threadId, forumThreads.id))
+        .where(eq(forumThreads.categoryId, categoryId))
+        .orderBy(
+          desc(sql`COALESCE(${forumThreadControls.isPinned}, false)`),
+          desc(forumThreads.lastActivityAt),
+          desc(forumThreads.id),
+        ).limit(limit);
+      return rows.map(row => ({
+        ...row.thread, author: row.author,
+        isPinned: row.pinned === true,
+        isLocked: row.locked === true,
+      }));
+    }
     return db.query.forumThreads.findMany({
       where: eq(forumThreads.categoryId, categoryId),
       orderBy: [desc(forumThreads.lastActivityAt)],
@@ -1020,12 +1044,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createForumReply(data: InsertForumReply, authorId: string): Promise<ForumReply> {
+    if (bulletinEnabled(process.env)) {
+      // Both reply insertion and moderator locking take the same row lock.
+      // This avoids a moderation/reply race after the route guard runs.
+      return db.transaction(async tx => {
+        const [thread] = await tx.select({
+          id: forumThreads.id, categoryId: forumThreads.categoryId,
+        }).from(forumThreads)
+          .where(eq(forumThreads.id, data.threadId)).for("update");
+        if (!thread) throw new Error("THREAD_NOT_FOUND");
+        const [control] = await tx.select({ locked: forumThreadControls.isLocked })
+          .from(forumThreadControls)
+          .where(eq(forumThreadControls.threadId, data.threadId)).limit(1);
+        if (control?.locked === true) throw new Error("THREAD_LOCKED");
+        const [reply] = await tx.insert(forumReplies)
+          .values({ ...data, authorId }).returning();
+        await tx.update(forumThreads).set({
+          replyCount: sql`${forumThreads.replyCount} + 1`,
+          lastActivityAt: new Date(),
+        }).where(eq(forumThreads.id, data.threadId));
+        await tx.update(forumCategories).set({
+          lastActivityAt: new Date(),
+        }).where(eq(forumCategories.id, thread.categoryId));
+        return reply;
+      });
+    }
+    // Existing storage path remains unchanged when bulletin is disabled.
     const [reply] = await db.insert(forumReplies).values({ ...data, authorId }).returning();
-    // Update thread reply count and lastActivityAt
-    await db.update(forumThreads)
-      .set({ replyCount: sql`${forumThreads.replyCount} + 1`, lastActivityAt: new Date() })
-      .where(eq(forumThreads.id, data.threadId));
-    // Also update category lastActivityAt
+    await db.update(forumThreads).set({
+      replyCount: sql`${forumThreads.replyCount} + 1`, lastActivityAt: new Date(),
+    }).where(eq(forumThreads.id, data.threadId));
     const [thread] = await db.select({ categoryId: forumThreads.categoryId }).from(forumThreads).where(eq(forumThreads.id, data.threadId));
     if (thread) {
       await db.update(forumCategories).set({ lastActivityAt: new Date() }).where(eq(forumCategories.id, thread.categoryId));
@@ -1033,7 +1081,7 @@ export class DatabaseStorage implements IStorage {
     return reply;
   }
 
-  async toggleForumVote(userId: string, entityType: string, entityId: number): Promise<{ voted: boolean; count: number; recipientId?: string }> {
+    async toggleForumVote(userId: string, entityType: string, entityId: number): Promise<{ voted: boolean; count: number; recipientId?: string }> {
     const [existing] = await db.select().from(forumVotes).where(
       and(eq(forumVotes.userId, userId), eq(forumVotes.entityType, entityType), eq(forumVotes.entityId, entityId))
     );
